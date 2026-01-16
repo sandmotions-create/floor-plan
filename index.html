@@ -2,155 +2,110 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Sandmotion | Enterprise Suite</title>
     
     <script src="https://preview.babylonjs.com/babylon.js"></script>
     <script src="https://preview.babylonjs.com/loaders/babylonjs.loaders.min.js"></script>
     <script src="https://preview.babylonjs.com/gui/babylon.gui.min.js"></script>
     
-    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet">
     
     <style>
-        /* --- MOBILE FIRST UI --- */
-        html, body { 
-            margin: 0; padding: 0; width: 100%; height: 100%; 
-            background: #0a0a0a; overflow: hidden; 
-            font-family: 'Montserrat', sans-serif; 
-            -webkit-tap-highlight-color: transparent;
-            user-select: none; /* Prevents text selection on touch */
-        }
+        /* --- UI STYLING --- */
+        body { margin: 0; overflow: hidden; font-family: 'Montserrat', sans-serif; background: #0a0a0a; cursor: default; user-select: none; -webkit-tap-highlight-color: transparent; }
+        #renderCanvas { width: 100%; height: 100%; touch-action: none; outline: none; }
+        #ui-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 20; }
+        #debug-log { position: absolute; top: 0; left: 0; width: 100%; background: rgba(200, 0, 0, 0.8); color: white; padding: 10px; z-index: 9999; display: none; font-size: 12px; }
 
-        #renderCanvas { 
-            width: 100%; height: 100%; 
-            touch-action: none; outline: none; display: block;
-        }
+        /* LEAD CAPTURE */
+        #lead-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); backdrop-filter: blur(10px); z-index: 100; justify-content: center; align-items: center; pointer-events: auto; opacity: 0; transition: opacity 0.4s ease; }
+        .modal-box { background: rgba(20, 20, 20, 0.9); border: 1px solid rgba(255, 255, 255, 0.1); color: white; padding: 40px 30px; border-radius: 20px; width: 90%; max-width: 380px; text-align: center; box-shadow: 0 25px 50px rgba(0,0,0,0.5); }
+        .modal-title { font-size: 22px; font-weight: 700; margin: 0 0 10px 0; color: #fff; }
+        .modal-sub { font-size: 13px; color: #aaa; margin-bottom: 25px; line-height: 1.4; }
+        .input-field { width: 100%; padding: 16px; margin-bottom: 12px; background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.1); color: white; border-radius: 12px; font-size: 14px; outline: none; transition: 0.2s; font-family: inherit; box-sizing: border-box; }
+        .input-field:focus { border-color: #00E5FF; background: rgba(0, 229, 255, 0.05); }
+        .unlock-btn { background: linear-gradient(135deg, #00E5FF 0%, #0088AA 100%); border: none; padding: 16px 0; width: 100%; font-weight: 700; font-size: 14px; cursor: pointer; border-radius: 12px; color: #000; letter-spacing: 1px; margin-top: 10px; box-shadow: 0 10px 20px rgba(0, 229, 255, 0.2); transition: 0.2s; }
+        .unlock-btn:active { transform: scale(0.98); }
+        .skip-btn { margin-top: 20px; font-size: 12px; color: #666; cursor: pointer; text-decoration: underline; pointer-events: auto; }
 
-        /* FULL SCREEN FIX */
-        #ui-layer { 
-            position: absolute; top: 0; left: 0; 
-            width: 100%; height: 100dvh; /* Dynamic height for mobile browsers */
-            pointer-events: none; z-index: 20; 
-        }
+        /* HUD */
+        #brand-box { position: absolute; top: 20px; left: 20px; pointer-events: auto; display: flex; flex-direction: column; text-shadow: 0 2px 4px rgba(0,0,0,0.8); z-index: 30; }
+        .project-title { color: white; font-weight: 800; font-size: 20px; letter-spacing: 1px; }
+        .brand-sub { color: #00E5FF; font-size: 10px; font-weight: 700; letter-spacing: 2px; }
+        #builder-logo { height: 35px; width: auto; display: block; margin-bottom: 5px; }
 
-        /* LEAD CAPTURE - Responsive Centering */
-        #lead-modal { 
-            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
-            background: rgba(0,0,0,0.9); backdrop-filter: blur(12px); 
-            z-index: 100; justify-content: center; align-items: center; 
-            pointer-events: auto; opacity: 0; transition: opacity 0.4s ease; 
-        }
-        .modal-box { 
-            background: rgba(20, 20, 20, 0.95); border: 1px solid rgba(255, 255, 255, 0.1); 
-            color: white; padding: 25px; border-radius: 20px; 
-            width: 85%; max-width: 320px; text-align: center; 
-            box-shadow: 0 20px 50px rgba(0,0,0,0.6);
-        }
-        .input-field { 
-            width: 100%; padding: 14px; margin-bottom: 10px; 
-            background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.1); 
-            color: white; border-radius: 10px; font-size: 16px; 
-            box-sizing: border-box; outline: none;
-        }
-        .unlock-btn { 
-            background: #00E5FF; border: none; padding: 14px 0; width: 100%; 
-            font-weight: 800; font-size: 14px; cursor: pointer; border-radius: 10px; 
-            color: #000; margin-top: 10px; text-transform: uppercase;
-        }
+        #sun-controls { position: absolute; top: 20px; left: 50%; transform: translateX(-50%); text-align: center; pointer-events: auto; background: rgba(0,0,0,0.6); padding: 8px 15px; border-radius: 30px; border: 1px solid rgba(255,255,255,0.1); backdrop-filter: blur(8px); z-index: 30; }
+        input[type=range] { width: 180px; accent-color: #00E5FF; cursor: pointer; height: 4px; }
 
-        /* BRANDING */
-        #brand-box { 
-            position: absolute; top: 20px; left: 20px; pointer-events: auto; 
-            display: flex; flex-direction: column; z-index: 30; 
-        }
-        #builder-logo { height: 24px; width: auto; display: block; margin-bottom: 4px; }
-        .project-title { color: white; font-weight: 800; font-size: 14px; letter-spacing: 1px; }
-        .brand-sub { color: #00E5FF; font-size: 9px; font-weight: 700; letter-spacing: 1px; }
+        #whatsapp-btn { position: absolute; bottom: 100px; right: 20px; width: 50px; height: 50px; border-radius: 50%; background: #25D366; box-shadow: 0 4px 15px rgba(37, 211, 102, 0.4); display: flex; align-items: center; justify-content: center; cursor: pointer; pointer-events: auto; transition: transform 0.2s; z-index: 30; text-decoration: none; font-size: 24px; color: white; }
+        #whatsapp-btn:hover { transform: scale(1.1); }
 
-        /* TIME SLIDER */
-        #sun-controls { 
-            position: absolute; top: 20px; left: 50%; transform: translateX(-50%); 
-            text-align: center; pointer-events: auto; 
-            background: rgba(0,0,0,0.5); padding: 8px 15px; border-radius: 20px; 
-            border: 1px solid rgba(255,255,255,0.15); backdrop-filter: blur(5px); z-index: 30; 
-            width: 120px;
-        }
-        input[type=range] { width: 100%; accent-color: #00E5FF; cursor: pointer; height: 3px; }
+        #cam-btn { position: absolute; top: 60px; right: 20px; width: 45px; height: 45px; background: rgba(30,30,30,0.8); border: 1px solid rgba(255,255,255,0.2); border-radius: 50%; color: white; font-size: 20px; cursor: pointer; display: flex; align-items: center; justify-content: center; pointer-events: auto; backdrop-filter: blur(5px); transition: 0.2s; z-index: 30; }
+        #cam-btn:active { transform: scale(0.9); background: #00E5FF; color: black; }
 
-        /* TOP RIGHT BUTTONS */
-        #cam-btn { 
-            position: absolute; top: 20px; right: 20px; 
-            width: 40px; height: 40px; background: rgba(0,0,0,0.6); 
-            border: 1px solid rgba(255,255,255,0.2); border-radius: 50%; 
-            color: white; font-size: 18px; display: flex; align-items: center; 
-            justify-content: center; pointer-events: auto; z-index: 30; 
-        }
+        #controls-bar { position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%); background: rgba(10, 10, 10, 0.85); padding: 10px 20px; border-radius: 50px; display: flex; gap: 15px; pointer-events: auto; border: 1px solid rgba(255,255,255,0.1); backdrop-filter: blur(10px); box-shadow: 0 10px 30px rgba(0,0,0,0.5); z-index: 30; }
+        .ctrl-btn { width: 50px; height: 50px; border-radius: 50%; background: rgba(255,255,255,0.05); color: #888; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 22px; transition: all 0.2s; position: relative; }
+        .ctrl-btn.active { background: #00E5FF; color: black; box-shadow: 0 0 20px rgba(0, 229, 255, 0.4); transform: translateY(-5px); }
+        .ctrl-btn:active { transform: scale(0.9); }
+        .tooltip { position: absolute; bottom: 65px; left: 50%; transform: translateX(-50%); background: black; color: white; padding: 4px 8px; border-radius: 4px; font-size: 10px; font-weight: 600; opacity: 0; pointer-events: none; white-space: nowrap; transition: 0.2s; }
+        .ctrl-btn:hover .tooltip { opacity: 1; bottom: 70px; }
 
-        /* BOTTOM CONTROL BAR - PERFECT ALIGNMENT */
-        #controls-bar { 
-            position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%); 
-            width: 90%; max-width: 360px; /* Limits width on large screens */
-            background: rgba(10, 10, 10, 0.9); padding: 10px 0; border-radius: 30px; 
-            display: flex; justify-content: space-evenly; align-items: center;
-            pointer-events: auto; border: 1px solid rgba(255,255,255,0.15); 
-            backdrop-filter: blur(10px); box-shadow: 0 10px 30px rgba(0,0,0,0.5); 
-            z-index: 30; 
-            padding-bottom: max(10px, env(safe-area-inset-bottom)); /* iPhone Home Bar Safe Area */
-        }
-        .ctrl-btn { 
-            width: 45px; height: 45px; border-radius: 50%; 
-            background: rgba(255,255,255,0.05); color: #888; 
-            cursor: pointer; display: flex; align-items: center; justify-content: center; 
-            font-size: 20px; transition: all 0.2s; position: relative; 
-        }
-        .ctrl-btn.active { background: #00E5FF; color: black; box-shadow: 0 0 15px rgba(0, 229, 255, 0.3); transform: translateY(-3px); }
+        #loader { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #050505; display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 999; }
+        #hover-tooltip { position: absolute; display: none; background: rgba(0, 0, 0, 0.9); border-left: 3px solid #00E5FF; color: white; padding: 8px 12px; border-radius: 0 6px 6px 0; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; pointer-events: none; z-index: 50; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
         
-        /* WHATSAPP - Above controls */
-        #whatsapp-btn { 
-            position: absolute; bottom: 120px; right: 20px; 
-            width: 45px; height: 45px; border-radius: 50%; background: #25D366; 
-            box-shadow: 0 4px 10px rgba(0,0,0,0.3); display: flex; align-items: center; 
-            justify-content: center; cursor: pointer; pointer-events: auto; 
-            z-index: 30; text-decoration: none; font-size: 22px; color: white; 
-        }
-
-        /* LOADING */
-        #loader { 
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
-            background: #050505; display: flex; flex-direction: column; 
-            justify-content: center; align-items: center; z-index: 999; 
-        }
+        #tour-status { display: none; position: absolute; top: 110px; left: 50%; transform: translateX(-50%); background: rgba(220, 20, 60, 0.9); color: white; padding: 6px 16px; border-radius: 20px; font-size: 11px; font-weight: 800; letter-spacing: 1px; pointer-events: none; box-shadow: 0 0 20px rgba(220, 20, 60, 0.6); animation: pulse 2s infinite; z-index: 25; }
+        @keyframes pulse { 0% { opacity: 0.8; } 50% { opacity: 1; } 100% { opacity: 0.8; } }
         
-        /* ALERTS */
-        #hover-tooltip { position: absolute; display: none; background: rgba(0, 0, 0, 0.8); border-left: 3px solid #00E5FF; color: white; padding: 6px 10px; border-radius: 0 4px 4px 0; font-size: 10px; font-weight: 700; text-transform: uppercase; pointer-events: none; z-index: 50; }
-        #tour-status { display: none; position: absolute; top: 80px; left: 50%; transform: translateX(-50%); background: #ff003c; color: white; padding: 5px 12px; border-radius: 15px; font-size: 10px; font-weight: 700; pointer-events: none; z-index: 25; }
-        
-        #crosshair { display: none; position: absolute; top: 50%; left: 50%; width: 8px; height: 8px; background: white; border-radius: 50%; transform: translate(-50%, -50%); pointer-events: none; z-index: 40; opacity: 0.5; }
-        #walk-instruct { position: absolute; top: 70%; left: 50%; transform: translate(-50%); color: rgba(255,255,255,0.7); padding: 5px 10px; background: rgba(0,0,0,0.4); border-radius: 8px; font-size: 10px; pointer-events: none; transition: opacity 1s; opacity: 0; z-index: 40; white-space: nowrap; }
+        #crosshair { display: none; position: absolute; top: 50%; left: 50%; width: 10px; height: 10px; background: rgba(255,255,255,0.5); border-radius: 50%; transform: translate(-50%, -50%); pointer-events: none; z-index: 40; border: 1px solid black; }
+        #walk-instruct { position: absolute; top: 80%; left: 50%; transform: translate(-50%); color: white; background: rgba(0,0,0,0.5); padding: 5px 10px; border-radius: 10px; font-size: 10px; pointer-events: none; transition: opacity 1s; opacity: 0; z-index: 40;}
 
-        #info-card { display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(10, 10, 10, 0.95); border: 1px solid #00E5FF; color: white; padding: 20px; border-radius: 15px; width: 80%; max-width: 300px; text-align: center; z-index: 50; pointer-events: auto; }
+        #info-card { display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(0, 0, 0, 0.9); border: 1px solid #00E5FF; color: white; padding: 20px; border-radius: 10px; max-width: 300px; text-align: center; z-index: 50; pointer-events: auto; box-shadow: 0 10px 40px rgba(0,0,0,0.8); }
         #info-title { color: #00E5FF; font-weight: 800; font-size: 16px; margin-bottom: 5px; text-transform: uppercase; }
-        #info-desc { font-size: 12px; color: #ccc; line-height: 1.4; }
-        .close-info { margin-top: 15px; font-size: 11px; cursor: pointer; text-decoration: underline; color: #888; padding: 10px; }
+        #info-desc { font-size: 12px; color: #ddd; line-height: 1.5; }
+        .close-info { margin-top: 15px; font-size: 10px; cursor: pointer; text-decoration: underline; color: #888; }
     </style>
 </head>
 <body>
     
+    <div id="debug-log"></div>
+
     <div id="loader">
         <div style="color:#00E5FF; font-size:40px; animation:spin 1s infinite;">⏳</div>
-        <div id="loader-text" style="color:#666; font-size:10px; margin-top:15px; letter-spacing:3px;">LOADING SUITE...</div>
+        <div id="loader-text" style="color:#666; font-size:11px; margin-top:15px; letter-spacing:3px;">LOADING ENGINE...</div>
     </div>
 
     <div id="lead-modal">
         <div class="modal-box">
             <div class="modal-title">VIP ACCESS</div>
-            <div class="modal-sub">Unlock the <b>Interactive Walkthrough</b></div>
+            <div class="modal-sub">Unlock the <b>First-Person Walkthrough</b> and experience this residence in real-time.</div>
             <input type="text" id="lead-name" class="input-field" placeholder="Full Name">
             <input type="tel" id="lead-phone" class="input-field" placeholder="Mobile Number">
-            <button class="unlock-btn" onclick="submitLead()">START TOUR</button>
-            <div class="skip-btn" onclick="closeModal()">Skip for now</div>
+            <button class="unlock-btn" onclick="submitLead()">UNLOCK NOW</button>
+            <div class="skip-btn" onclick="closeModal()">No thanks, keep rotating</div>
         </div>
     </div>
+
+    <div id="cam-btn" onclick="takeScreenshot()" title="Take Photo">📷</div>
+    <a id="whatsapp-btn" href="https://wa.me/918208072906" target="_blank" title="Chat on WhatsApp">💬</a>
+    
+    <div id="sun-controls">
+        <div style="color:white; font-size:9px; font-weight:700; letter-spacing:1px; margin-bottom:5px;">☀️ TIME OF DAY</div>
+        <input type="range" id="time-slider" min="0" max="100" value="50">
+    </div>
+
+    <div id="hover-tooltip">LIVING ROOM</div>
+    <div id="tour-status">🔴 LIVE TOUR</div>
+    <div id="crosshair"></div>
+    <div id="walk-instruct">Tap Blue Circles to Walk</div>
+    
+    <div id="info-card">
+        <div id="info-title">FEATURE TITLE</div>
+        <div id="info-desc">Feature description goes here.</div>
+        <div class="close-info" onclick="document.getElementById('info-card').style.display='none'">CLOSE</div>
+    </div>
+
+    <canvas id="renderCanvas"></canvas>
 
     <div id="ui-layer">
         <div id="brand-box">
@@ -159,46 +114,20 @@
             <div class="brand-sub">PREMIUM RESIDENCES</div>
         </div>
 
-        <div id="sun-controls">
-            <div style="color:white; font-size:8px; font-weight:700; letter-spacing:1px; margin-bottom:4px;">TIME OF DAY</div>
-            <input type="range" id="time-slider" min="0" max="100" value="50">
-        </div>
-
-        <div id="cam-btn" onclick="takeScreenshot()">📷</div>
-        <a id="whatsapp-btn" href="https://wa.me/918208072906" target="_blank">💬</a>
-
-        <div id="hover-tooltip">LIVING ROOM</div>
-        <div id="tour-status">🔴 AUTO TOUR</div>
-        <div id="crosshair"></div>
-        <div id="walk-instruct">Tap Blue Rings to Walk</div>
-
         <div id="controls-bar">
-            <div class="ctrl-btn active" id="btn-orbit" onclick="setMode('orbit')">🔄</div>
-            <div class="ctrl-btn" id="btn-tour" onclick="toggleTour()">▶</div>
-            <div class="ctrl-btn" id="btn-walk" onclick="setMode('walk')">🚶</div>
-            <div class="ctrl-btn" id="btn-blue" onclick="toggleBlueprint()">📐</div>
-            <div class="ctrl-btn" id="btn-furn" onclick="toggleFurniture()">🛋️</div>
-        </div>
-
-        <div id="info-card">
-            <div id="info-title">FEATURE</div>
-            <div id="info-desc">Description here.</div>
-            <div class="close-info" onclick="document.getElementById('info-card').style.display='none'">CLOSE</div>
+            <div class="ctrl-btn active" id="btn-orbit" onclick="setMode('orbit')">🔄<span class="tooltip">360 View</span></div>
+            <div class="ctrl-btn" id="btn-tour" onclick="toggleTour()">▶<span class="tooltip">Auto Tour</span></div>
+            <div class="ctrl-btn" id="btn-walk" onclick="setMode('walk')">🚶<span class="tooltip">Walk</span></div>
+            <div class="ctrl-btn" id="btn-blue" onclick="toggleBlueprint()">📐<span class="tooltip">Dimensions</span></div>
+            <div class="ctrl-btn" id="btn-furn" onclick="toggleFurniture()">🛋️<span class="tooltip">Furniture</span></div>
         </div>
     </div>
-
-    <canvas id="renderCanvas"></canvas>
 
     <script>
     window.addEventListener('DOMContentLoaded', function() {
         
         const canvas = document.getElementById("renderCanvas");
-        const engine = new BABYLON.Engine(canvas, true, { preserveDrawingBuffer: true, stencil: true, adaptToDeviceRatio: true });
-
-        // --- MOBILE QUALITY FIX ---
-        // Force scaling to 1.0 to prevent "Blurry/Cheap" look on phones.
-        // This prioritizes Visual Quality over battery life.
-        engine.setHardwareScalingLevel(1.0); 
+        const engine = new BABYLON.Engine(canvas, true, { preserveDrawingBuffer: true, stencil: true });
 
         // --- VARIABLES ---
         let sceneRef, orbitCam, walkCam, sunLight, shadowGen, hl, ssaoPipeline;
@@ -230,7 +159,7 @@
             // 2. LIGHTING & ENVIRONMENT (BALANCED)
             const envTexture = BABYLON.CubeTexture.CreateFromPrefilteredData("https://assets.babylonjs.com/environments/environmentSpecular.env", scene);
             scene.environmentTexture = envTexture;
-            scene.environmentIntensity = 0.3; // Prevent white wash
+            scene.environmentIntensity = 0.25; 
 
             // NATURAL AMBIENT
             const hemiLight = new BABYLON.HemisphericLight("hemi", new BABYLON.Vector3(0, 1, 0), scene);
@@ -241,24 +170,23 @@
             sunLight.position = new BABYLON.Vector3(20, 40, 20);
             sunLight.intensity = 1.5; 
             
-            // SHADOWS (Optimized for Mobile)
-            shadowGen = new BABYLON.ShadowGenerator(1024, sunLight); 
+            shadowGen = new BABYLON.ShadowGenerator(2048, sunLight);
             shadowGen.usePercentageCloserFiltering = true; 
             shadowGen.bias = 0.00005; shadowGen.normalBias = 0.02;
 
             // 3. CAMERAS
-            orbitCam = new BABYLON.ArcRotateCamera("OrbitCam", -Math.PI/2, Math.PI/3, 18, new BABYLON.Vector3(0, 0, 0), scene);
-            orbitCam.lowerRadiusLimit = 2; orbitCam.upperRadiusLimit = 40;
+            orbitCam = new BABYLON.ArcRotateCamera("OrbitCam", -Math.PI/2, Math.PI/3, 15, new BABYLON.Vector3(0, 0, 0), scene);
+            orbitCam.lowerRadiusLimit = 2; orbitCam.upperRadiusLimit = 35;
             orbitCam.lowerBetaLimit = 0.1; orbitCam.upperBetaLimit = Math.PI / 2.1;
             orbitCam.useAutoRotationBehavior = true;
             orbitCam.attachControl(canvas, true);
 
-            // WALK CAM
+            // WALK CAM: Height 1.3m, FOV 1.0
             walkCam = new BABYLON.UniversalCamera("WalkCam", new BABYLON.Vector3(0, 1.3, 0), scene);
             walkCam.fov = 1.0; 
-            walkCam.speed = 0.2; 
-            walkCam.minZ = 0.1;
-            walkCam.angularSensibility = 4000; // Slower rotation for better touch control
+            walkCam.speed = 0.2; walkCam.minZ = 0.1; walkCam.inertia = 0.9;
+            walkCam.angularSensibility = 3000;
+            walkCam.keysUp = [87]; walkCam.keysDown = [83]; walkCam.keysLeft = [65]; walkCam.keysRight = [68]; 
             scene.gravity = new BABYLON.Vector3(0, -0.9, 0);
             walkCam.checkCollisions = true; walkCam.applyGravity = true;
             walkCam.ellipsoid = new BABYLON.Vector3(0.4, 0.8, 0.4); 
@@ -266,13 +194,11 @@
 
             scene.activeCamera = orbitCam;
 
-            // 4. GUI & PIPELINE (HIGH QUALITY)
-            // IDEAL WIDTH IS KEY: Makes labels look consistent on mobile vs desktop
+            // 4. GUI & PIPELINE (BALANCED)
             advancedTexture = BABYLON.GUI.AdvancedDynamicTexture.CreateFullscreenUI("UI");
-            advancedTexture.idealWidth = 600; // SCALES UI ELEMENTS DOWN FOR MOBILE
             
             const pipeline = new BABYLON.DefaultRenderingPipeline("default", true, scene, [orbitCam, walkCam]);
-            pipeline.samples = 4; // High Anti-Aliasing
+            pipeline.samples = 4; 
             pipeline.fxaaEnabled = true; 
             pipeline.bloomEnabled = true; pipeline.bloomThreshold = 0.95; pipeline.bloomWeight = 0.1; 
             
@@ -282,7 +208,7 @@
             pipeline.imageProcessing.contrast = 1.1; 
             pipeline.imageProcessing.exposure = 1.0; 
 
-            // SSAO 2 (Enabled for Quality)
+            // SSAO 2
             ssaoPipeline = new BABYLON.SSAO2RenderingPipeline("ssao", scene, 0.75, [orbitCam, walkCam]);
             ssaoPipeline.radius = 3.0; 
             ssaoPipeline.totalStrength = 0.5;
@@ -312,6 +238,7 @@
                         if (lowerName.includes("nav_")) {
                             const absPos = node.getAbsolutePosition();
                             const pos = new BABYLON.Vector3(absPos.x, 0.005, absPos.z);
+                            
                             const forwardDir = node.getDirection(BABYLON.Vector3.Forward()); 
                             const lookTarget = pos.add(forwardDir.scale(5));
 
@@ -321,7 +248,6 @@
                             if(node.isVisible !== undefined) node.isVisible = false; 
                         }
 
-                        // C. LABELS (HIDDEN BY DEFAULT)
                         if (lowerName.includes("label_")) {
                             createRoomLabel(node); 
                             if(node.isVisible !== undefined) node.isVisible = false; 
@@ -380,6 +306,8 @@
                 if (isMoving && walkCam) {
                     const now = Date.now();
                     const progress = Math.min(1, (now - moveStartTime) / moveDuration);
+                    
+                    // Ease Out Quad
                     const ease = progress * (2 - progress);
 
                     walkCam.position = BABYLON.Vector3.Lerp(startPos, targetPos, ease);
@@ -402,15 +330,18 @@
             return scene;
         };
 
-        // --- CINEMATIC MOVEMENT ---
+        // --- CINEMATIC MOVEMENT FUNCTIONS ---
         function cinematicTravelTo(destination, lookAt, duration) {
             isMoving = true;
             moveStartTime = Date.now();
             moveDuration = duration;
+            
             walkCam.applyGravity = false;
             walkCam.checkCollisions = false;
+
             startPos = walkCam.position.clone();
             targetPos = new BABYLON.Vector3(destination.x, 1.3, destination.z); 
+            
             startTarget = walkCam.getTarget().clone();
             endTarget = lookAt.clone();
         }
@@ -450,18 +381,21 @@
             if(!isTouring) return;
             tourIndex++;
             if(tourIndex >= tourWaypoints.length) tourIndex = 0; 
+            
             const pt = tourWaypoints[tourIndex];
             const nextIdx = (tourIndex + 1) >= tourWaypoints.length ? 0 : tourIndex + 1;
             const nextPt = tourWaypoints[nextIdx];
             const smartLookAt = new BABYLON.Vector3(nextPt.pos.x, 1.3, nextPt.pos.z);
+
             cinematicTravelTo(pt.pos, smartLookAt, 3000); 
         }
 
         // --- GAMING RING STYLE ---
         function createTeleportPuck(position, lookAtTarget) {
-            const spawnY = 0.005; 
+            const spawnY = 0.02; 
             const center = new BABYLON.Vector3(position.x, spawnY, position.z);
 
+            // 1. CENTER DOT
             const dot = BABYLON.MeshBuilder.CreateDisc("dot", {radius: 0.15, tessellation: 32}, sceneRef);
             dot.position = center;
             dot.rotation.x = Math.PI / 2;
@@ -470,24 +404,36 @@
             dotMat.disableLighting = true;
             dot.material = dotMat;
 
+            // 2. INNER PULSING RING
             const innerRing = BABYLON.MeshBuilder.CreateTorus("inner", {diameter: 0.5, thickness: 0.05, tessellation: 64}, sceneRef);
             innerRing.position = center;
             innerRing.material = dotMat; 
 
+            // Pulse
             const animPulse = new BABYLON.Animation("pulse", "scaling", 60, BABYLON.Animation.ANIMATIONTYPE_VECTOR3, BABYLON.Animation.ANIMATIONLOOPMODE_CYCLE);
-            animPulse.setKeys([{ frame: 0, value: new BABYLON.Vector3(1, 1, 1) }, { frame: 60, value: new BABYLON.Vector3(1.15, 1.15, 1.15) }, { frame: 120, value: new BABYLON.Vector3(1, 1, 1) }]);
+            animPulse.setKeys([
+                { frame: 0, value: new BABYLON.Vector3(1, 1, 1) },
+                { frame: 60, value: new BABYLON.Vector3(1.15, 1.15, 1.15) },
+                { frame: 120, value: new BABYLON.Vector3(1, 1, 1) }
+            ]);
             innerRing.animations.push(animPulse);
             sceneRef.beginAnimation(innerRing, 0, 120, true);
 
+            // 3. OUTER ROTATING RING
             const outerRing = BABYLON.MeshBuilder.CreateTorus("outer", {diameter: 0.9, thickness: 0.02, tessellation: 64}, sceneRef);
             outerRing.position = center;
             outerRing.material = dotMat;
 
+            // Spin
             const animSpin = new BABYLON.Animation("spin", "rotation.y", 60, BABYLON.Animation.ANIMATIONTYPE_FLOAT, BABYLON.Animation.ANIMATIONLOOPMODE_CYCLE);
-            animSpin.setKeys([{ frame: 0, value: 0 }, { frame: 240, value: Math.PI * 2 }]);
+            animSpin.setKeys([
+                { frame: 0, value: 0 },
+                { frame: 240, value: Math.PI * 2 }
+            ]);
             outerRing.animations.push(animSpin);
             sceneRef.beginAnimation(outerRing, 0, 240, true);
 
+            // 4. TRIGGER
             const trigger = BABYLON.MeshBuilder.CreateDisc("trigger", {radius: 0.6}, sceneRef);
             trigger.position = new BABYLON.Vector3(position.x, spawnY + 0.01, position.z);
             trigger.rotation.x = Math.PI / 2;
@@ -506,15 +452,13 @@
         window.createRoomLabel = function(node) {
             const parts = node.name.split("_"); if (parts.length < 3) return; 
             const dimText = parts.pop(); const roomName = parts.slice(1).join(" "); 
-            
             const rect = new BABYLON.GUI.Rectangle(); 
             rect.width = "140px"; rect.height = "55px"; rect.cornerRadius = 12; rect.color = "#00E5FF"; rect.thickness = 1; rect.background = "rgba(10,10,10,0.85)"; rect.zIndex = 5;
             const stack = new BABYLON.GUI.StackPanel(); stack.isVertical = true; rect.addControl(stack);
             const nameBlock = new BABYLON.GUI.TextBlock(); nameBlock.text = roomName; nameBlock.color = "white"; nameBlock.fontSize = 12; nameBlock.fontWeight = "bold"; nameBlock.height = "25px"; stack.addControl(nameBlock);
             const dimBlock = new BABYLON.GUI.TextBlock(); dimBlock.text = dimText.replace("ft", "'"); dimBlock.color = "#00E5FF"; dimBlock.fontSize = 11; dimBlock.height = "20px"; stack.addControl(dimBlock);
             
-            // CRITICAL FIX: Hide by default!
-            rect.isVisible = false; 
+            rect.isVisible = false; // HIDDEN BY DEFAULT
             
             advancedTexture.addControl(rect); rect.linkWithMesh(node); rect.linkOffsetY = -60; labels.push(rect); 
         };
