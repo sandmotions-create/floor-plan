@@ -1,0 +1,654 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Sandmotion | Enterprise Suite</title>
+    
+    <script src="https://preview.babylonjs.com/babylon.js"></script>
+    <script src="https://preview.babylonjs.com/loaders/babylonjs.loaders.min.js"></script>
+    <script src="https://preview.babylonjs.com/gui/babylon.gui.min.js"></script>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;700;800&display=swap" rel="stylesheet">
+    
+    <style>
+        /* --- MOBILE FIRST UI --- */
+        html, body { 
+            margin: 0; padding: 0; width: 100%; height: 100%; 
+            background: #0a0a0a; overflow: hidden; 
+            font-family: 'Montserrat', sans-serif; 
+            -webkit-tap-highlight-color: transparent;
+            user-select: none; /* Prevents text selection on touch */
+        }
+
+        #renderCanvas { 
+            width: 100%; height: 100%; 
+            touch-action: none; outline: none; display: block;
+        }
+
+        /* FULL SCREEN FIX */
+        #ui-layer { 
+            position: absolute; top: 0; left: 0; 
+            width: 100%; height: 100dvh; /* Dynamic height for mobile browsers */
+            pointer-events: none; z-index: 20; 
+        }
+
+        /* LEAD CAPTURE - Responsive Centering */
+        #lead-modal { 
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+            background: rgba(0,0,0,0.9); backdrop-filter: blur(12px); 
+            z-index: 100; justify-content: center; align-items: center; 
+            pointer-events: auto; opacity: 0; transition: opacity 0.4s ease; 
+        }
+        .modal-box { 
+            background: rgba(20, 20, 20, 0.95); border: 1px solid rgba(255, 255, 255, 0.1); 
+            color: white; padding: 25px; border-radius: 20px; 
+            width: 85%; max-width: 320px; text-align: center; 
+            box-shadow: 0 20px 50px rgba(0,0,0,0.6);
+        }
+        .input-field { 
+            width: 100%; padding: 14px; margin-bottom: 10px; 
+            background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.1); 
+            color: white; border-radius: 10px; font-size: 16px; 
+            box-sizing: border-box; outline: none;
+        }
+        .unlock-btn { 
+            background: #00E5FF; border: none; padding: 14px 0; width: 100%; 
+            font-weight: 800; font-size: 14px; cursor: pointer; border-radius: 10px; 
+            color: #000; margin-top: 10px; text-transform: uppercase;
+        }
+
+        /* BRANDING */
+        #brand-box { 
+            position: absolute; top: 20px; left: 20px; pointer-events: auto; 
+            display: flex; flex-direction: column; z-index: 30; 
+        }
+        #builder-logo { height: 24px; width: auto; display: block; margin-bottom: 4px; }
+        .project-title { color: white; font-weight: 800; font-size: 14px; letter-spacing: 1px; }
+        .brand-sub { color: #00E5FF; font-size: 9px; font-weight: 700; letter-spacing: 1px; }
+
+        /* TIME SLIDER */
+        #sun-controls { 
+            position: absolute; top: 20px; left: 50%; transform: translateX(-50%); 
+            text-align: center; pointer-events: auto; 
+            background: rgba(0,0,0,0.5); padding: 8px 15px; border-radius: 20px; 
+            border: 1px solid rgba(255,255,255,0.15); backdrop-filter: blur(5px); z-index: 30; 
+            width: 120px;
+        }
+        input[type=range] { width: 100%; accent-color: #00E5FF; cursor: pointer; height: 3px; }
+
+        /* TOP RIGHT BUTTONS */
+        #cam-btn { 
+            position: absolute; top: 20px; right: 20px; 
+            width: 40px; height: 40px; background: rgba(0,0,0,0.6); 
+            border: 1px solid rgba(255,255,255,0.2); border-radius: 50%; 
+            color: white; font-size: 18px; display: flex; align-items: center; 
+            justify-content: center; pointer-events: auto; z-index: 30; 
+        }
+
+        /* BOTTOM CONTROL BAR - PERFECT ALIGNMENT */
+        #controls-bar { 
+            position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%); 
+            width: 90%; max-width: 360px; /* Limits width on large screens */
+            background: rgba(10, 10, 10, 0.9); padding: 10px 0; border-radius: 30px; 
+            display: flex; justify-content: space-evenly; align-items: center;
+            pointer-events: auto; border: 1px solid rgba(255,255,255,0.15); 
+            backdrop-filter: blur(10px); box-shadow: 0 10px 30px rgba(0,0,0,0.5); 
+            z-index: 30; 
+            padding-bottom: max(10px, env(safe-area-inset-bottom)); /* iPhone Home Bar Safe Area */
+        }
+        .ctrl-btn { 
+            width: 45px; height: 45px; border-radius: 50%; 
+            background: rgba(255,255,255,0.05); color: #888; 
+            cursor: pointer; display: flex; align-items: center; justify-content: center; 
+            font-size: 20px; transition: all 0.2s; position: relative; 
+        }
+        .ctrl-btn.active { background: #00E5FF; color: black; box-shadow: 0 0 15px rgba(0, 229, 255, 0.3); transform: translateY(-3px); }
+        
+        /* WHATSAPP - Above controls */
+        #whatsapp-btn { 
+            position: absolute; bottom: 120px; right: 20px; 
+            width: 45px; height: 45px; border-radius: 50%; background: #25D366; 
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3); display: flex; align-items: center; 
+            justify-content: center; cursor: pointer; pointer-events: auto; 
+            z-index: 30; text-decoration: none; font-size: 22px; color: white; 
+        }
+
+        /* LOADING */
+        #loader { 
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+            background: #050505; display: flex; flex-direction: column; 
+            justify-content: center; align-items: center; z-index: 999; 
+        }
+        
+        /* ALERTS */
+        #hover-tooltip { position: absolute; display: none; background: rgba(0, 0, 0, 0.8); border-left: 3px solid #00E5FF; color: white; padding: 6px 10px; border-radius: 0 4px 4px 0; font-size: 10px; font-weight: 700; text-transform: uppercase; pointer-events: none; z-index: 50; }
+        #tour-status { display: none; position: absolute; top: 80px; left: 50%; transform: translateX(-50%); background: #ff003c; color: white; padding: 5px 12px; border-radius: 15px; font-size: 10px; font-weight: 700; pointer-events: none; z-index: 25; }
+        
+        #crosshair { display: none; position: absolute; top: 50%; left: 50%; width: 8px; height: 8px; background: white; border-radius: 50%; transform: translate(-50%, -50%); pointer-events: none; z-index: 40; opacity: 0.5; }
+        #walk-instruct { position: absolute; top: 70%; left: 50%; transform: translate(-50%); color: rgba(255,255,255,0.7); padding: 5px 10px; background: rgba(0,0,0,0.4); border-radius: 8px; font-size: 10px; pointer-events: none; transition: opacity 1s; opacity: 0; z-index: 40; white-space: nowrap; }
+
+        #info-card { display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(10, 10, 10, 0.95); border: 1px solid #00E5FF; color: white; padding: 20px; border-radius: 15px; width: 80%; max-width: 300px; text-align: center; z-index: 50; pointer-events: auto; }
+        #info-title { color: #00E5FF; font-weight: 800; font-size: 16px; margin-bottom: 5px; text-transform: uppercase; }
+        #info-desc { font-size: 12px; color: #ccc; line-height: 1.4; }
+        .close-info { margin-top: 15px; font-size: 11px; cursor: pointer; text-decoration: underline; color: #888; padding: 10px; }
+    </style>
+</head>
+<body>
+    
+    <div id="loader">
+        <div style="color:#00E5FF; font-size:40px; animation:spin 1s infinite;">⏳</div>
+        <div id="loader-text" style="color:#666; font-size:10px; margin-top:15px; letter-spacing:3px;">LOADING SUITE...</div>
+    </div>
+
+    <div id="lead-modal">
+        <div class="modal-box">
+            <div class="modal-title">VIP ACCESS</div>
+            <div class="modal-sub">Unlock the <b>Interactive Walkthrough</b></div>
+            <input type="text" id="lead-name" class="input-field" placeholder="Full Name">
+            <input type="tel" id="lead-phone" class="input-field" placeholder="Mobile Number">
+            <button class="unlock-btn" onclick="submitLead()">START TOUR</button>
+            <div class="skip-btn" onclick="closeModal()">Skip for now</div>
+        </div>
+    </div>
+
+    <div id="ui-layer">
+        <div id="brand-box">
+             <img id="builder-logo" src="https://upload.wikimedia.org/wikipedia/commons/a/ab/Logo_TV_2015.png" alt="Builder Logo">
+            <div class="project-title">SANDMOTION</div>
+            <div class="brand-sub">PREMIUM RESIDENCES</div>
+        </div>
+
+        <div id="sun-controls">
+            <div style="color:white; font-size:8px; font-weight:700; letter-spacing:1px; margin-bottom:4px;">TIME OF DAY</div>
+            <input type="range" id="time-slider" min="0" max="100" value="50">
+        </div>
+
+        <div id="cam-btn" onclick="takeScreenshot()">📷</div>
+        <a id="whatsapp-btn" href="https://wa.me/918208072906" target="_blank">💬</a>
+
+        <div id="hover-tooltip">LIVING ROOM</div>
+        <div id="tour-status">🔴 AUTO TOUR</div>
+        <div id="crosshair"></div>
+        <div id="walk-instruct">Tap Blue Rings to Walk</div>
+
+        <div id="controls-bar">
+            <div class="ctrl-btn active" id="btn-orbit" onclick="setMode('orbit')">🔄</div>
+            <div class="ctrl-btn" id="btn-tour" onclick="toggleTour()">▶</div>
+            <div class="ctrl-btn" id="btn-walk" onclick="setMode('walk')">🚶</div>
+            <div class="ctrl-btn" id="btn-blue" onclick="toggleBlueprint()">📐</div>
+            <div class="ctrl-btn" id="btn-furn" onclick="toggleFurniture()">🛋️</div>
+        </div>
+
+        <div id="info-card">
+            <div id="info-title">FEATURE</div>
+            <div id="info-desc">Description here.</div>
+            <div class="close-info" onclick="document.getElementById('info-card').style.display='none'">CLOSE</div>
+        </div>
+    </div>
+
+    <canvas id="renderCanvas"></canvas>
+
+    <script>
+    window.addEventListener('DOMContentLoaded', function() {
+        
+        const canvas = document.getElementById("renderCanvas");
+        const engine = new BABYLON.Engine(canvas, true, { preserveDrawingBuffer: true, stencil: true, adaptToDeviceRatio: true });
+
+        // --- MOBILE QUALITY FIX ---
+        // Force scaling to 1.0 to prevent "Blurry/Cheap" look on phones.
+        // This prioritizes Visual Quality over battery life.
+        engine.setHardwareScalingLevel(1.0); 
+
+        // --- VARIABLES ---
+        let sceneRef, orbitCam, walkCam, sunLight, shadowGen, hl, ssaoPipeline;
+        let advancedTexture, labels = [], navPucks = [], infoSpots = [];
+        let currentMode = 'orbit';
+        let blueprintMode = false;
+        let furnitureVisible = true;
+        let isTouring = false;
+        let tourIndex = 0;
+        let tourWaypoints = [];
+        
+        // MOVEMENT VARIABLES
+        let isMoving = false;
+        let moveStartTime = 0;
+        let moveDuration = 0;
+        let startPos = null;
+        let targetPos = null;
+        let startTarget = null;
+        let endTarget = null; 
+
+        const createScene = function () {
+            const scene = new BABYLON.Scene(engine);
+            scene.clearColor = new BABYLON.Color4(0.05, 0.05, 0.05, 1);
+
+            // 1. HIGHLIGHT LAYER
+            hl = new BABYLON.HighlightLayer("hl1", scene);
+            hl.innerGlow = false; hl.outerGlow = true;
+
+            // 2. LIGHTING & ENVIRONMENT (BALANCED)
+            const envTexture = BABYLON.CubeTexture.CreateFromPrefilteredData("https://assets.babylonjs.com/environments/environmentSpecular.env", scene);
+            scene.environmentTexture = envTexture;
+            scene.environmentIntensity = 0.3; // Prevent white wash
+
+            // NATURAL AMBIENT
+            const hemiLight = new BABYLON.HemisphericLight("hemi", new BABYLON.Vector3(0, 1, 0), scene);
+            hemiLight.intensity = 0.7; 
+
+            // SUN
+            sunLight = new BABYLON.DirectionalLight("sun", new BABYLON.Vector3(-1, -2, -1), scene);
+            sunLight.position = new BABYLON.Vector3(20, 40, 20);
+            sunLight.intensity = 1.5; 
+            
+            // SHADOWS (Optimized for Mobile)
+            shadowGen = new BABYLON.ShadowGenerator(1024, sunLight); 
+            shadowGen.usePercentageCloserFiltering = true; 
+            shadowGen.bias = 0.00005; shadowGen.normalBias = 0.02;
+
+            // 3. CAMERAS
+            orbitCam = new BABYLON.ArcRotateCamera("OrbitCam", -Math.PI/2, Math.PI/3, 18, new BABYLON.Vector3(0, 0, 0), scene);
+            orbitCam.lowerRadiusLimit = 2; orbitCam.upperRadiusLimit = 40;
+            orbitCam.lowerBetaLimit = 0.1; orbitCam.upperBetaLimit = Math.PI / 2.1;
+            orbitCam.useAutoRotationBehavior = true;
+            orbitCam.attachControl(canvas, true);
+
+            // WALK CAM
+            walkCam = new BABYLON.UniversalCamera("WalkCam", new BABYLON.Vector3(0, 1.3, 0), scene);
+            walkCam.fov = 1.0; 
+            walkCam.speed = 0.2; 
+            walkCam.minZ = 0.1;
+            walkCam.angularSensibility = 4000; // Slower rotation for better touch control
+            scene.gravity = new BABYLON.Vector3(0, -0.9, 0);
+            walkCam.checkCollisions = true; walkCam.applyGravity = true;
+            walkCam.ellipsoid = new BABYLON.Vector3(0.4, 0.8, 0.4); 
+            walkCam.inputs.clear(); walkCam.inputs.addMouse(); walkCam.inputs.addKeyboard(); walkCam.inputs.addTouch(); 
+
+            scene.activeCamera = orbitCam;
+
+            // 4. GUI & PIPELINE (HIGH QUALITY)
+            // IDEAL WIDTH IS KEY: Makes labels look consistent on mobile vs desktop
+            advancedTexture = BABYLON.GUI.AdvancedDynamicTexture.CreateFullscreenUI("UI");
+            advancedTexture.idealWidth = 600; // SCALES UI ELEMENTS DOWN FOR MOBILE
+            
+            const pipeline = new BABYLON.DefaultRenderingPipeline("default", true, scene, [orbitCam, walkCam]);
+            pipeline.samples = 4; // High Anti-Aliasing
+            pipeline.fxaaEnabled = true; 
+            pipeline.bloomEnabled = true; pipeline.bloomThreshold = 0.95; pipeline.bloomWeight = 0.1; 
+            
+            // TONE MAPPING
+            pipeline.imageProcessing.toneMappingEnabled = true;
+            pipeline.imageProcessing.toneMappingType = BABYLON.ImageProcessingConfiguration.TONEMAPPING_ACES;
+            pipeline.imageProcessing.contrast = 1.1; 
+            pipeline.imageProcessing.exposure = 1.0; 
+
+            // SSAO 2 (Enabled for Quality)
+            ssaoPipeline = new BABYLON.SSAO2RenderingPipeline("ssao", scene, 0.75, [orbitCam, walkCam]);
+            ssaoPipeline.radius = 3.0; 
+            ssaoPipeline.totalStrength = 0.5;
+            ssaoPipeline.expensiveBlur = true;
+            ssaoPipeline.samples = 16;
+            ssaoPipeline.maxZ = 100;
+
+            // 5. LOAD MODEL
+            BABYLON.SceneLoader.Append("./", "model.glb", scene, 
+                function (scene) {
+                    document.getElementById("loader").style.display = "none";
+                    const modal = document.getElementById("lead-modal");
+                    if(modal.style.display !== "none") setTimeout(() => { modal.style.opacity = 1; }, 100);
+
+                    const allNodes = scene.transformNodes.concat(scene.meshes);
+
+                    allNodes.forEach(node => {
+                        const lowerName = node.name.toLowerCase();
+                        
+                        // A. ENTRY POINT
+                        if (lowerName.includes("start_point")) {
+                             orbitCam.setTarget(node.position);
+                             walkCam.position = new BABYLON.Vector3(node.position.x, 1.3, node.position.z);
+                        }
+
+                        // B. NAV SPOTS
+                        if (lowerName.includes("nav_")) {
+                            const absPos = node.getAbsolutePosition();
+                            const pos = new BABYLON.Vector3(absPos.x, 0.005, absPos.z);
+                            const forwardDir = node.getDirection(BABYLON.Vector3.Forward()); 
+                            const lookTarget = pos.add(forwardDir.scale(5));
+
+                            createTeleportPuck(pos, lookTarget); 
+                            
+                            tourWaypoints.push({ name: node.name, pos: pos, lookAt: lookTarget });
+                            if(node.isVisible !== undefined) node.isVisible = false; 
+                        }
+
+                        // C. LABELS (HIDDEN BY DEFAULT)
+                        if (lowerName.includes("label_")) {
+                            createRoomLabel(node); 
+                            if(node.isVisible !== undefined) node.isVisible = false; 
+                        }
+                        if (lowerName.includes("info_")) {
+                            createInfoSpot(node.position, node.name);
+                            if(node.isVisible !== undefined) node.isVisible = false; 
+                        }
+                        if (node instanceof BABYLON.Mesh) {
+                            node.checkCollisions = true; node.receiveShadows = true; shadowGen.addShadowCaster(node);
+                            if(node.material) {
+                                if (lowerName.includes("glass")) {
+                                    node.material.alpha = 0.2; 
+                                    node.material.transparencyMode = 2; 
+                                    shadowGen.removeShadowCaster(node); 
+                                }
+                            }
+                        }
+                    });
+
+                    // SORT
+                    tourWaypoints.sort((a, b) => {
+                        const nameA = a.name.toLowerCase();
+                        const nameB = b.name.toLowerCase();
+                        if (nameA.includes("start") || nameA.includes("main")) return -1;
+                        if (nameB.includes("start") || nameB.includes("main")) return 1;
+                        return nameA.localeCompare(nameB, undefined, { numeric: true, sensitivity: 'base' });
+                    });
+                    
+                    // SHOW RINGS
+                    navPucks.forEach(p => p.setEnabled(true));
+
+                },
+                function (evt) { if (evt.lengthComputable) document.getElementById("loader-text").innerText = "LOADING: " + ((evt.loaded/evt.total)*100).toFixed(0) + "%"; },
+                function (scene, message, exception) { console.error(message); document.getElementById("debug-log").style.display = "block"; document.getElementById("debug-log").innerText = "ERROR: " + message; }
+            );
+
+            // HOVER
+            const tooltip = document.getElementById("hover-tooltip");
+            scene.onPointerObservable.add((pointerInfo) => {
+                if (pointerInfo.type === BABYLON.PointerEventTypes.POINTERDOWN) { if (isTouring) stopTour(); }
+                if (pointerInfo.type === BABYLON.PointerEventTypes.POINTERMOVE) {
+                    const result = scene.pick(scene.pointerX, scene.pointerY);
+                    if (result.hit && result.pickedMesh && result.pickedMesh.name !== "skyBox") {
+                        let cleanName = result.pickedMesh.name.replace(/Furniture_/i, "").replace(/Floor_/i, "").split("_")[0].replace(/([A-Z])/g, ' $1').trim();
+                        if(!cleanName.toLowerCase().match(/nav|label|puck|disc|dot|inner|outer|trigger/)) {
+                             tooltip.innerText = cleanName; tooltip.style.display = "block";
+                             tooltip.style.left = (scene.pointerX + 15) + "px"; tooltip.style.top = (scene.pointerY + 15) + "px";
+                        } else { tooltip.style.display = "none"; }
+                    } else { tooltip.style.display = "none"; }
+                }
+            });
+
+            // GAME LOOP MOVEMENT
+            scene.onBeforeRenderObservable.add(() => {
+                if (isMoving && walkCam) {
+                    const now = Date.now();
+                    const progress = Math.min(1, (now - moveStartTime) / moveDuration);
+                    const ease = progress * (2 - progress);
+
+                    walkCam.position = BABYLON.Vector3.Lerp(startPos, targetPos, ease);
+                    
+                    const currentLook = BABYLON.Vector3.Lerp(startTarget, endTarget, ease);
+                    walkCam.setTarget(currentLook);
+
+                    if (progress >= 1) {
+                        isMoving = false;
+                        walkCam.applyGravity = true;
+                        walkCam.checkCollisions = true;
+                        if(isTouring) {
+                            setTimeout(nextTourPoint, 2000); 
+                        }
+                    }
+                }
+            });
+
+            sceneRef = scene;
+            return scene;
+        };
+
+        // --- CINEMATIC MOVEMENT ---
+        function cinematicTravelTo(destination, lookAt, duration) {
+            isMoving = true;
+            moveStartTime = Date.now();
+            moveDuration = duration;
+            walkCam.applyGravity = false;
+            walkCam.checkCollisions = false;
+            startPos = walkCam.position.clone();
+            targetPos = new BABYLON.Vector3(destination.x, 1.3, destination.z); 
+            startTarget = walkCam.getTarget().clone();
+            endTarget = lookAt.clone();
+        }
+
+        window.toggleTour = function() { if(isTouring) stopTour(); else startTour(); };
+
+        window.startTour = function() {
+            if(currentMode !== 'walk') setMode('walk');
+            isTouring = true;
+            tourIndex = 0; 
+            document.getElementById('tour-status').style.display = 'block';
+            document.getElementById('btn-tour').classList.add('active');
+            
+            if(tourWaypoints.length > 0) {
+                const startPt = tourWaypoints[0];
+                walkCam.position = new BABYLON.Vector3(startPt.pos.x, 1.3, startPt.pos.z);
+                
+                let startLookTarget = startPt.lookAt;
+                if(tourWaypoints.length > 1) {
+                    startLookTarget = new BABYLON.Vector3(tourWaypoints[1].pos.x, 1.3, tourWaypoints[1].pos.z);
+                }
+                
+                walkCam.setTarget(startLookTarget);
+                
+                setTimeout(() => { if(isTouring) nextTourPoint(); }, 1500); 
+            } else { alert("No Nav_ points found."); }
+        };
+
+        window.stopTour = function() {
+            isTouring = false; isMoving = false;
+            walkCam.applyGravity = true; walkCam.checkCollisions = true;
+            document.getElementById('tour-status').style.display = 'none';
+            document.getElementById('btn-tour').classList.remove('active');
+        };
+
+        function nextTourPoint() {
+            if(!isTouring) return;
+            tourIndex++;
+            if(tourIndex >= tourWaypoints.length) tourIndex = 0; 
+            const pt = tourWaypoints[tourIndex];
+            const nextIdx = (tourIndex + 1) >= tourWaypoints.length ? 0 : tourIndex + 1;
+            const nextPt = tourWaypoints[nextIdx];
+            const smartLookAt = new BABYLON.Vector3(nextPt.pos.x, 1.3, nextPt.pos.z);
+            cinematicTravelTo(pt.pos, smartLookAt, 3000); 
+        }
+
+        // --- GAMING RING STYLE ---
+        function createTeleportPuck(position, lookAtTarget) {
+            const spawnY = 0.005; 
+            const center = new BABYLON.Vector3(position.x, spawnY, position.z);
+
+            const dot = BABYLON.MeshBuilder.CreateDisc("dot", {radius: 0.15, tessellation: 32}, sceneRef);
+            dot.position = center;
+            dot.rotation.x = Math.PI / 2;
+            const dotMat = new BABYLON.StandardMaterial("dotMat", sceneRef);
+            dotMat.emissiveColor = BABYLON.Color3.FromHexString("#00E5FF"); 
+            dotMat.disableLighting = true;
+            dot.material = dotMat;
+
+            const innerRing = BABYLON.MeshBuilder.CreateTorus("inner", {diameter: 0.5, thickness: 0.05, tessellation: 64}, sceneRef);
+            innerRing.position = center;
+            innerRing.material = dotMat; 
+
+            const animPulse = new BABYLON.Animation("pulse", "scaling", 60, BABYLON.Animation.ANIMATIONTYPE_VECTOR3, BABYLON.Animation.ANIMATIONLOOPMODE_CYCLE);
+            animPulse.setKeys([{ frame: 0, value: new BABYLON.Vector3(1, 1, 1) }, { frame: 60, value: new BABYLON.Vector3(1.15, 1.15, 1.15) }, { frame: 120, value: new BABYLON.Vector3(1, 1, 1) }]);
+            innerRing.animations.push(animPulse);
+            sceneRef.beginAnimation(innerRing, 0, 120, true);
+
+            const outerRing = BABYLON.MeshBuilder.CreateTorus("outer", {diameter: 0.9, thickness: 0.02, tessellation: 64}, sceneRef);
+            outerRing.position = center;
+            outerRing.material = dotMat;
+
+            const animSpin = new BABYLON.Animation("spin", "rotation.y", 60, BABYLON.Animation.ANIMATIONTYPE_FLOAT, BABYLON.Animation.ANIMATIONLOOPMODE_CYCLE);
+            animSpin.setKeys([{ frame: 0, value: 0 }, { frame: 240, value: Math.PI * 2 }]);
+            outerRing.animations.push(animSpin);
+            sceneRef.beginAnimation(outerRing, 0, 240, true);
+
+            const trigger = BABYLON.MeshBuilder.CreateDisc("trigger", {radius: 0.6}, sceneRef);
+            trigger.position = new BABYLON.Vector3(position.x, spawnY + 0.01, position.z);
+            trigger.rotation.x = Math.PI / 2;
+            trigger.visibility = 0;
+
+            trigger.actionManager = new BABYLON.ActionManager(sceneRef);
+            trigger.actionManager.registerAction(new BABYLON.ExecuteCodeAction(BABYLON.ActionManager.OnPickTrigger, function () {
+                if (currentMode !== 'walk') setMode('walk');
+                stopTour();
+                cinematicTravelTo(position, lookAtTarget, 1500);
+            }));
+            
+            navPucks.push(dot); navPucks.push(innerRing); navPucks.push(outerRing); navPucks.push(trigger);
+        }
+
+        window.createRoomLabel = function(node) {
+            const parts = node.name.split("_"); if (parts.length < 3) return; 
+            const dimText = parts.pop(); const roomName = parts.slice(1).join(" "); 
+            
+            const rect = new BABYLON.GUI.Rectangle(); 
+            rect.width = "140px"; rect.height = "55px"; rect.cornerRadius = 12; rect.color = "#00E5FF"; rect.thickness = 1; rect.background = "rgba(10,10,10,0.85)"; rect.zIndex = 5;
+            const stack = new BABYLON.GUI.StackPanel(); stack.isVertical = true; rect.addControl(stack);
+            const nameBlock = new BABYLON.GUI.TextBlock(); nameBlock.text = roomName; nameBlock.color = "white"; nameBlock.fontSize = 12; nameBlock.fontWeight = "bold"; nameBlock.height = "25px"; stack.addControl(nameBlock);
+            const dimBlock = new BABYLON.GUI.TextBlock(); dimBlock.text = dimText.replace("ft", "'"); dimBlock.color = "#00E5FF"; dimBlock.fontSize = 11; dimBlock.height = "20px"; stack.addControl(dimBlock);
+            
+            // CRITICAL FIX: Hide by default!
+            rect.isVisible = false; 
+            
+            advancedTexture.addControl(rect); rect.linkWithMesh(node); rect.linkOffsetY = -60; labels.push(rect); 
+        };
+        
+        function createInfoSpot(position, name) {
+            const plane = BABYLON.MeshBuilder.CreatePlane("infoPlane", {size: 0.2}, sceneRef);
+            plane.position = new BABYLON.Vector3(position.x, position.y + 0.5, position.z);
+            plane.billboardMode = BABYLON.Mesh.BILLBOARDMODE_ALL;
+            const advancedTexture3D = BABYLON.GUI.AdvancedDynamicTexture.CreateForMesh(plane);
+            const button = BABYLON.GUI.Button.CreateSimpleButton("btn", "+");
+            button.width = "40px"; button.height = "40px"; button.color = "white"; button.fontSize = 24;
+            button.background = "#00E5FF"; button.cornerRadius = 20; button.thickness = 0;
+            button.onPointerUpObservable.add(function() {
+                const card = document.getElementById("info-card");
+                const title = document.getElementById("info-title");
+                let cleanName = name.split("_")[1] || "Feature";
+                title.innerText = cleanName.replace(/([A-Z])/g, ' $1').trim();
+                card.style.display = "block";
+            });
+            advancedTexture3D.addControl(button);
+            infoSpots.push(plane); 
+        }
+
+        window.submitLead = function() {
+            localStorage.setItem("sandmotion_unlocked", "true");
+            const modal = document.getElementById("lead-modal");
+            modal.style.opacity = 0; setTimeout(() => modal.style.display = "none", 300);
+            window.setMode('walk'); 
+        };
+
+        window.closeModal = function() { 
+            const modal = document.getElementById("lead-modal");
+            modal.style.opacity = 0; setTimeout(() => modal.style.display = "none", 300);
+        };
+
+        window.takeScreenshot = function() {
+            document.getElementById("ui-layer").style.display = "none";
+            document.getElementById("hover-tooltip").style.display = "none";
+            BABYLON.Tools.CreateScreenshot(engine, sceneRef.activeCamera, { precision: 2 }, function(data) {
+                document.getElementById("ui-layer").style.display = "block";
+                const link = document.createElement('a'); link.download = 'Sandmotion_View.png'; link.href = data; link.click();
+            });
+        };
+
+        window.resetView = function() { 
+            orbitCam.alpha = -Math.PI / 2; orbitCam.beta = Math.PI / 3; orbitCam.radius = 15; orbitCam.setTarget(BABYLON.Vector3.Zero());
+        };
+
+        window.setMode = function(mode, force = false) {
+            if (mode === 'walk' && !force) {
+                if (!localStorage.getItem("sandmotion_unlocked")) {
+                    const modal = document.getElementById("lead-modal");
+                    modal.style.display = "flex"; setTimeout(() => modal.style.opacity = 1, 10);
+                    return; 
+                }
+            }
+            currentMode = mode;
+            document.querySelectorAll('.ctrl-btn').forEach(b => b.classList.remove('active'));
+            document.getElementById('btn-' + mode).classList.add('active');
+            
+            if(blueprintMode) document.getElementById('btn-blue').classList.add('active');
+            if(furnitureVisible) document.getElementById('btn-furn').classList.add('active');
+
+            const canvas = sceneRef.getEngine().getRenderingCanvas();
+            if (mode === 'walk') {
+                sceneRef.activeCamera.detachControl(canvas); sceneRef.activeCamera = walkCam;
+                if(currentMode !== 'walk') walkCam.position = new BABYLON.Vector3(0, 2, 0); 
+                walkCam.attachControl(canvas, true);
+                
+                navPucks.forEach(p => p.setEnabled(true));
+                infoSpots.forEach(s => s.setEnabled(true));
+                
+                document.getElementById('crosshair').style.display = 'block';
+                document.getElementById('walk-instruct').style.opacity = 1; setTimeout(() => document.getElementById('walk-instruct').style.opacity = 0, 5000);
+
+            } else {
+                resetView();
+                sceneRef.activeCamera.detachControl(canvas); sceneRef.activeCamera = orbitCam;
+                orbitCam.attachControl(canvas, true);
+                
+                navPucks.forEach(p => p.setEnabled(true));
+                infoSpots.forEach(s => s.setEnabled(true));
+                
+                document.getElementById('crosshair').style.display = 'none';
+                stopTour();
+            }
+        };
+
+        window.toggleBlueprint = function() {
+            blueprintMode = !blueprintMode;
+            document.getElementById("btn-blue").classList.toggle("active");
+            if (blueprintMode) {
+                labels.forEach(l => l.isVisible = true);
+                sceneRef.meshes.forEach(m => { 
+                    const lowerName = m.name.toLowerCase();
+                    if (m.name !== "skyBox") { if (lowerName.includes("floor")) m.visibility = 1.0; else m.visibility = 0.1; } 
+                });
+                orbitCam.useAutoRotationBehavior = false;
+            } else {
+                labels.forEach(l => l.isVisible = false);
+                sceneRef.meshes.forEach(m => m.visibility = 1);
+                orbitCam.useAutoRotationBehavior = true;
+            }
+        };
+
+        window.toggleFurniture = function() {
+            furnitureVisible = !furnitureVisible;
+            document.getElementById("btn-furn").classList.toggle("active");
+            sceneRef.meshes.forEach(mesh => { 
+                const lowerName = mesh.name.toLowerCase();
+                if (lowerName.includes("floor") || lowerName.includes("ground")) return; 
+                if (mesh.metadata === "furniture" || lowerName.includes("furniture")) mesh.setEnabled(furnitureVisible);
+            });
+        };
+        
+        const slider = document.getElementById("time-slider");
+        if(slider) {
+            slider.addEventListener("input", function() {
+                const val = this.value; 
+                const angle = ((val / 100) * Math.PI) - (Math.PI / 4);
+                if(sunLight) {
+                    sunLight.direction.x = Math.cos(angle); sunLight.direction.y = -Math.sin(angle); sunLight.direction.z = -0.5;
+                    sunLight.intensity = Math.max(0, Math.sin(angle) * 1.5);
+                }
+            });
+        }
+
+        document.getElementById('btn-orbit').classList.add('active');
+        document.getElementById('btn-furn').classList.add('active');
+
+        const scene = createScene();
+        engine.runRenderLoop(function () { scene.render(); });
+        window.addEventListener("resize", function () { engine.resize(); });
+    });
+    </script>
+</body>
+</html>
